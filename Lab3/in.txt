@@ -1,0 +1,1 @@
+This is a string in a text file to be passed to the server. The server should then print this out to another file.
