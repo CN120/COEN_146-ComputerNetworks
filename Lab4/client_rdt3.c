@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include "tfv2.h"
 #include <time.h>
+#include <sys/select.h>
+#include <fcntl.h>
 
 
 /***********
@@ -123,8 +125,8 @@ sndpckt: sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, 
 				pak1->header.checksum=0;
 				printf("sending: '%s'  with Checksum ERROR\n", pak1->data);
 			}
-			else if(randNum<20){goto skip}
-			else{
+			else if(randNum<20){goto skip;}
+			else {
 resend:			pak1->header.checksum=0;
 				pak1->header.checksum=calc_checksum(pak1, sizeof(HEADER)+pak1->header.length);
 				printf ("Sending: '%s'  seq num: %d\n", pak1->data, pak1->header.seq_ack);
@@ -165,7 +167,7 @@ skip:
 			//send empty packet when finihed reading
 	        memset(pak1->data, '\0',sizeof(pak1->data));
 	        pak1->header.length=0;
-	        pak1->header.checksum=calc_checksum(pak1, sizeof(HEADER) +pak1->header.length);
+	        pak1->header.checksum=0;
 	        sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, addr_size);
 	        fclose(inFile);
 	        return 0;
