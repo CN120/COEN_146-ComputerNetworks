@@ -83,7 +83,7 @@ sndpckt: sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, 
 	FD_ZERO (&readfds);
 	FD_SET (sock, &readfds);
 	// set the timer
-	tv.tv_sec = 3;
+	tv.tv_sec = 10;
 	tv.tv_usec = 0;
 	//get select value
 	rv = select (sock + 1, &readfds, NULL, NULL, &tv); // call select
@@ -139,13 +139,12 @@ skip:
 			FD_ZERO (&readfds);
 			FD_SET (sock, &readfds);
 			// set the timer
-			tv.tv_sec =3;
+			tv.tv_sec = 10;
 			tv.tv_usec = 0;
 			//get select value
 			rv = select (sock + 1, &readfds, NULL, NULL, &tv); // call select
 /*  receive  */
 			if(rv==0){
-				printf("Resending '%s'\n",pak1->data);
 				goto resend;
 			}
 			else if(rv==1){
@@ -171,13 +170,13 @@ skip:
 	        pak1->header.checksum=0;
 			resendCount=0;
 resendLast: sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, addr_size);
-
+	        fclose(inFile);
 /* start & check timer */
 			// start before calling select
 			FD_ZERO (&readfds);
 			FD_SET (sock, &readfds);
 			// set the timer
-			tv.tv_sec = 3;
+			tv.tv_sec = 10;
 			tv.tv_usec = 0;
 			//get select value
 			rv = select (sock + 1, &readfds, NULL, NULL, &tv); // call select
@@ -196,7 +195,6 @@ rsdCount: 	  if(resendCount<3){
 			  else{
 				  printf("3 consecutive sendLast errors\n");
 				  printf("TERMINATING PROGRAM\n");
-				  fclose(inFile);
 				  return 1;
 			  }
 			}

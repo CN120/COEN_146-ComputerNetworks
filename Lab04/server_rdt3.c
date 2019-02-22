@@ -89,8 +89,7 @@ recvAgain:	nBytes = recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *
 
 		randNum= rand()%100;
 		if (randNum<10){
-		  printf("%s\n","not sening ack" );
-		  goto recvAgain;
+
 		}
 
 
@@ -100,7 +99,7 @@ recvAgain:	nBytes = recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *
     	s_pak->header.checksum = 0;
 		local_checksum = calc_checksum(s_pak, sizeof(HEADER)+s_pak->header.length);
 
-		if(s_pak->header.length == 0){ // && local_checksum == pak_checksum && (state==s_pak->header.seq_ack)){
+		if(s_pak->header.length == 0) //&& local_checksum == pak_checksum && (state==s_pak->header.seq_ack)){
 			fclose(outFile);
 			printf("%s\n", "end of file");
 			sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size); //send ack

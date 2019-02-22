@@ -8,7 +8,6 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
 #include "tfv2.h"
 
 /********************
@@ -25,15 +24,9 @@ int main (int argc, char *argv[]) {
 	int local_checksum;
 	int state = 0; //state of pgrm
 
-	//random number;
-	srand (time(NULL));
-	int randNum;
-
 	FILE *outFile;
 	PACKET *s_pak = malloc(sizeof(PACKET));
 
-	/* start bracket */
-	{
     if (argc != 2)
     {
         printf ("need the port number\n");
@@ -58,13 +51,11 @@ int main (int argc, char *argv[]) {
 		printf ("bind error\n");
 		return 1;
 	}
-	}
-	/* end bracket */
 
 recv:recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, &addr_size);
     pak_checksum = s_pak->header.checksum;
     s_pak->header.checksum = 0;
-	local_checksum = calc_checksum(s_pak, sizeof(HEADER)+s_pak->header.length);
+	local_checksum = calc_checksum(s_pak, sizeof(s_pak->header)+s_pak->header.length);
 
 	if(local_checksum!=pak_checksum || state!=s_pak->header.seq_ack){
 		printf("server inside if stmt\n");
@@ -77,50 +68,53 @@ recv:recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage
 	/* send back positive ack */
 	sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size);
 
+	printf("%s\n",s_pak->data);
 	outFile = fopen(s_pak->data, "w");
-
-/* while loop */
+	printf("server reached while loop\n");
 	while (1){
 		state = (state==0) ? 1:0; //flips state
 		// receive  datagrams
 		//printf("server inside while loop\n");
-
-recvAgain:	nBytes = recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, &addr_size);
-
-		randNum= rand()%100;
-		if (randNum<10){
-		  printf("%s\n","not sening ack" );
-		  goto recvAgain;
+		memset(s_pak->data, '\0',sizeof(s_pak->data));
+		nBytes = recvfrom (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, &addr_size);
+		if(s_pak->header.length == 0){
+			fclose(outFile);
+			goto EndStmt;
 		}
-
-
-		printf ("received: '%s' seq num: %d and state: %d\n", s_pak->data, s_pak->header.seq_ack, state);
+		printf ("recv: %s with seq num: %d and state: %d\n", s_pak->data, s_pak->header.seq_ack, state);
 		//printf("server recieved datagram\n");
 		pak_checksum = s_pak->header.checksum;
     	s_pak->header.checksum = 0;
-		local_checksum = calc_checksum(s_pak, sizeof(HEADER)+s_pak->header.length);
+		local_checksum = calc_checksum(s_pak, sizeof(s_pak->header)+s_pak->header.length);
 
-		if(s_pak->header.length == 0){ // && local_checksum == pak_checksum && (state==s_pak->header.seq_ack)){
-			fclose(outFile);
-			printf("%s\n", "end of file");
-			sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size); //send ack
-			return 0;
-		}
 
-		else if(local_checksum != pak_checksum || (state!=s_pak->header.seq_ack) ){
-			printf("FAILURE: Checksum or Sequence Number\n");
+		if(local_checksum != pak_checksum || (state!=s_pak->header.seq_ack) ){
+			printf("checksum failed\n");
 			s_pak->header.checksum = 0;
-			printf("Checksum: %d vs %d\n",pak_checksum, local_checksum);
-			printf("Sequence: %d vs %d\n\n", s_pak->header.seq_ack, state);
+			printf("%d vs %d\n",pak_checksum, local_checksum);
+			printf("%s\n",s_pak->data);
 			s_pak->header.seq_ack = (s_pak->header.seq_ack==0? 1: 0); //flips ack to negative ack
 			sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size); //send neg ack
-			goto recvAgain;
 		}
 		else{
-			printf("writing to file...\n");
+			printf("write %s\n", s_pak->data);
 			fwrite(s_pak->data, 1, s_pak->header.length, outFile);
-			sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size); //send ack
+			printf("written %s\n", s_pak->data);
 		}
+		//printf("server reached sendto\n");
+		sendto (sock, s_pak, sizeof(PACKET), 0, (struct sockaddr *)&serverStorage, addr_size);
+		//printf("server passed sendto\n");
+
+
+		/*
+		// convert message
+		for (i = 0; i < nBytes - 1; i++)
+			buffer[i] = toupper (buffer[i]);
+
+		// send message back
+		sendto (sock, buffer, nBytes, 0, (struct sockaddr *)&serverStorage, addr_size);
+		*/
 	}
-	return 0;
+
+EndStmt:	return 0;
 }
