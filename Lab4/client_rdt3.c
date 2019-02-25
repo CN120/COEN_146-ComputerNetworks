@@ -90,7 +90,7 @@ sndpckt: sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, 
 /*--------------------------------------------------------------------------*/
 /*  receive  */
 	if(rv==0){
-		goto sndpckt;
+		goto sndpckt; //resend
 	}
 	else if(rv==1){
 		recvfrom (sock, pak2, pak1->header.length, 0,(struct sockaddr *)&serverAddr, &addr_size);
@@ -183,7 +183,7 @@ resendLast: sendto (sock, pak1, sizeof(PACKET), 0, (struct sockaddr *)&serverAdd
 			rv = select (sock + 1, &readfds, NULL, NULL, &tv); // call select
 /*  receive  */
 			if(rv==0){
-				goto rsdCount;
+				goto rsdCount;	//checks resend counter
 			}
 			else if(rv==1){
 				recvfrom (sock, pak2, sizeof(PACKET), 0, (struct sockaddr *)&serverAddr, &addr_size);
