@@ -25,5 +25,32 @@ Thread 3:
 - runs algorithm to update least costs
   */
 
+/*
+Thread 1:
+parse cost file
+while (1):
+    listen for incoming messages
+    if: recieve message
+        down mutex
+        update table
+        up mutex
 
-  
+Thread 2:
+count 10 seconds:
+    get keyboard input
+    down mutex
+    update table
+    up mutex
+    send out updates over UDP
+
+Thread 3:
+while(1)""
+    go to sleeps for x seconds
+    wakeup
+    run Dijkstra's Algorithm
+    down mutex
+    update table
+    up mutex
+
+
+ */
