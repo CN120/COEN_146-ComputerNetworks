@@ -13,6 +13,7 @@ ex: ./lab5 0 4 cost machines
 */
 
 #define numNodes 4
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -31,14 +32,16 @@ typedef struct{
 }Machine;
 
 
-/* Global Variable */
+/* Global Variables */
 int cost_matrix[numNodes][numNodes];
 Machine linux_machines[numNodes];
-int srcID;
-int sock;
+int myID;
 pthread_mutex_t lock;
 
-
+/* network globals */
+int sock;
+struct sockaddr_in listen_addr;
+socklen_t addr_size;
 
 /* Link State Thread - Thread 3 */
 void* linkState(void* args){
@@ -68,14 +71,17 @@ void printTable(void){
 }
 /* Main Function */
 int main(int argc, char *argv[]){
+/* start collapse */{
+    srand(time(NULL));  //seed random
+    myID = atoi(argv[1]); //sets the program number of the program being run1
     /* setup threads */
     pthread_t thr2, thr3;
     pthread_create(&thr3, NULL, linkState, NULL);
     pthread_create(&thr2, NULL, recieveInfo, NULL);
     /* end thread setup */
 
-    srand(time(NULL));  //seed random
-    srcID = atoi(argv[1]);
+
+
     /* Fill cost_matrix */{
     FILE* fp = fopen(argv[3], "r"); //open cost file for reading
 
@@ -87,14 +93,19 @@ int main(int argc, char *argv[]){
     }
     printTable();
 
-    /* Fill Machine structs */{
+    /* Fill Machine structs */
     fp = fopen(argv[4], "r");   //open machines file for reading
     for(i=0; i<numNodes; ++i){
         fscanf(fp, "%s %s %d", linux_machines[i].name, linux_machines[i].ip, linux_machines[i].port)
     }
-    }
+    } /* end collapse */
 
-
+/* Network setup */{}
+    listen_addr.sin_family = AF_INET;
+    listen_addr.sin_port = linux_machines[myID].port;   //port this node will listen on
+    listen_addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    memset((char*)listen_addr.sin_zero, '\0', sizeof(listen_addr));
+    addr_size = sizeof(listen_addr);
 
 
 }
