@@ -43,6 +43,7 @@ pthread_mutex_init(&myMutex, NULL);
 /* network globals */
 int sock;
 struct sockaddr_in listen_addr;
+struct sockaddr_in recAddr;
 socklen_t addr_size;
 /********************/
 /* FUNCTIONS START */
@@ -51,11 +52,24 @@ socklen_t addr_size;
 void* linkState(void* args){
     int srcNode;
     int leastDistanceArray[numNodes];
+    memset(leastDistanceArray, INT_MAX, sizeof(leastDistanceArray));
     bool visited[numNodes];
     while (true){
         for(srcNode=0; srcNode < numNodes; ++srcNode){
             memset(visited, false, sizeof(visited)); //should work because bools are ints in 'C'
-            memcpy(leastDistanceArray, cost_matrix[srcNode], sizeof(cost_matrix));
+            memcpy(leastDistanceArray, cost_matrix[srcNode], sizeof(cost_matrix[srcNode]));
+            visited[srcNode]=true;
+            for(int a=1; a<numNodes-1; ++a){
+                int minIndex;
+                int minCost = INT_MAX;
+                for(int b=0; b<numNodes; ++b){
+                    if(!visited[b] && cost_matrix[srcNode][b] < minCost){
+                        minCost = cost_matrix[srcNode][b];
+                        minIndex = b;
+                    }
+                }
+                
+            }
 
         }
     }
@@ -65,24 +79,22 @@ void* linkState(void* args){
 
 /* Recieve Info Thread - Thread 2 */
 void* recieveInfo(void* b){
-
-}
-
-void* test1(void* c){
-    printf("test 1\n");
-}
-void* test2(void* d){
-    printf("test2\n");
+    int pack2[3];
+    recvfrom(sock,pack2, sizeof(pack2),0, NULL, NULL);
+    pthread_lock(&myMutex); //lock
+    cost_matrix[pack2[0]][pack2[1]] = pack2[2];
+    cost_matrix[pack2[1]][pack2[0]] = pack[2];
+    pthread_unlock(&myMutex); //unlock
 }
 
 /* print out table */
 void printTable(void){
-    pthread_lock(&myMutex);
+    pthread_lock(&myMutex); //lock
     int i;
     for(i=0; i<4; ++i){
         printf("%d %d %d %d\n", cost_matrix[i][0], cost_matrix[i][1], cost_matrix[i][2], cost_matrix[i][3]);
     }
-    pthread_unlock(myMutex);
+    pthread_unlock(myMutex);    //unlock
 }
 /* Main Function */
 int main(int argc, char *argv[]){
@@ -102,6 +114,7 @@ int main(int argc, char *argv[]){
     for(i=0; i<numNodes; ++i){
         fscanf(fp, "%s %s %d", linux_machines[i].name, linux_machines[i].ip, &linux_machines[i].port);
     }
+    fclose(fp);
 /*----------------------------------------------------------------------------------------*/
 
 /* Network setup */
@@ -125,9 +138,32 @@ int main(int argc, char *argv[]){
     pthread_create(&thr2, NULL, recieveInfo, NULL);
 
 /*------------------------------------------------------------------------------------*/
-
-
-
+    
+    //input: change cost table from command line
+    printf("please enter an update in the form:\nmachine1 machine2 new_cost")
+    pack[3]; //update array packet
+    pthread_lock(&myMutex); //lock
+    fscan("%d %d %d",pack[0], pack[1], pack[2])
+    
+    cost_matrix[pack[0]][pack[1]] = pack[2];
+    cost_matrix[pack[1]][pack[0]] = pack[2];
+    pthread_unlock(&myMutex); //unlock
+    //end input
+    recAddr.sin_family = AF_INET;
+    //send updates
+    for(int i=0; i<numNodes; ++1){
+        if(i == myID){
+            continue;
+        }
+        
+        recAddr.sin_port = htons (linux_machines[i].port);
+        inet_pton (AF_INET, linux_machines[i].ip, &recAddr.sin_addr.s_addr);
+        memset (recAddr.sin_zero, '\0', sizeof (recAddr.sin_zero));
+        addr_size = sizeof recAddr;
+        sendto (sock, pack, sizeof(pack), 0, (struct sockaddr *)&recAddr, addr_size); //
+    }
+    
+    
 
 
 }
