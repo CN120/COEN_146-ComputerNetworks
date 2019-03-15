@@ -15,12 +15,7 @@
 #include <arpa/inet.h>
 
 int main (int, char *[]);
-/*
-argv[1] - port
-argv[2] - IP address
-argv[3] - in text
-argv[4] - out text
- */
+
 
 /********************
  *	main
@@ -81,8 +76,8 @@ int main (int argc, char *argv[])
 	//argv[3] is input file
 	inFile = fopen(argv[3], "r");
 
-	while(!feof(inFile)){
-		bytes_Read = fread(buff, 1, sizeof (buff), inFile);
+	while(!feof(inFile)){ /* this */
+		bytes_Read = fread(buff, 1, sizeof (buff), inFile); /* this */
 		write(sockfd, buff, bytes_Read);
 	}
 	fclose(inFile);
