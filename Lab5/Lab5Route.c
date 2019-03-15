@@ -24,6 +24,7 @@ ex: ./lab5 0 4 cost machines
 #include <unistd.h> //sleep
 #include <time.h> //random
 #include <pthread.h> //threads library
+#include <limits.h> //int_max
 
 /* define Machine struct */
 typedef struct{
@@ -38,7 +39,7 @@ int cost_matrix[numNodes][numNodes];
 Machine linux_machines[numNodes];
 int myID;
 pthread_mutex_t myMutex;
-pthread_mutex_init(&myMutex, NULL);
+
 
 /* network globals */
 int sock;
@@ -81,23 +82,24 @@ void* linkState(void* args){
 void* recieveInfo(void* b){
     int pack2[3];
     recvfrom(sock,pack2, sizeof(pack2),0, NULL, NULL);
-    pthread_lock(&myMutex); //lock
+    pthread_mutex_lock(&myMutex); //lock
     cost_matrix[pack2[0]][pack2[1]] = pack2[2];
-    cost_matrix[pack2[1]][pack2[0]] = pack[2];
-    pthread_unlock(&myMutex); //unlock
+    cost_matrix[pack2[1]][pack2[0]] = pack2[2];
+    pthread_mutex_unlock(&myMutex); //unlock
 }
 
 /* print out table */
 void printTable(void){
-    pthread_lock(&myMutex); //lock
+    pthread_mutex_lock(&myMutex); //lock
     int i;
     for(i=0; i<4; ++i){
         printf("%d %d %d %d\n", cost_matrix[i][0], cost_matrix[i][1], cost_matrix[i][2], cost_matrix[i][3]);
     }
-    pthread_unlock(myMutex);    //unlock
+    pthread_mutex_unlock(&myMutex);    //unlock
 }
 /* Main Function */
 int main(int argc, char *argv[]){
+    pthread_mutex_init(&myMutex, NULL);
     /* Fill cost_matrix */
     FILE* fp = fopen(argv[3], "r"); //open cost file for reading
 
@@ -140,25 +142,25 @@ int main(int argc, char *argv[]){
 /*------------------------------------------------------------------------------------*/
     
     //input: change cost table from command line
-    printf("please enter an update in the form:\nmachine1 machine2 new_cost")
-    pack[3]; //update array packet
-    pthread_lock(&myMutex); //lock
-    fscan("%d %d %d",pack[0], pack[1], pack[2])
-    
+    printf("please enter an update in the form:\nmachine1 machine2 new_cost");
+    int pack[3]; //update array packet
+    scanf("%d %d", &pack[1], &pack[2]);
+    pack[0] = myID;
+    pthread_mutex_lock(&myMutex); //lock
     cost_matrix[pack[0]][pack[1]] = pack[2];
     cost_matrix[pack[1]][pack[0]] = pack[2];
-    pthread_unlock(&myMutex); //unlock
+    pthread_mutex_unlock(&myMutex); //unlock
     //end input
     recAddr.sin_family = AF_INET;
     //send updates
-    for(int i=0; i<numNodes; ++1){
+    for(int i=0; i<numNodes; ++i){
         if(i == myID){
             continue;
         }
         
         recAddr.sin_port = htons (linux_machines[i].port);
         inet_pton (AF_INET, linux_machines[i].ip, &recAddr.sin_addr.s_addr);
-        memset (recAddr.sin_zero, '\0', sizeof (recAddr.sin_zero));
+        //memset (recAddr.sin_zero, '\0', sizeof (recAddr.sin_zero));
         addr_size = sizeof recAddr;
         sendto (sock, pack, sizeof(pack), 0, (struct sockaddr *)&recAddr, addr_size); //
     }
