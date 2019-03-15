@@ -46,6 +46,26 @@ int sock;
 struct sockaddr_in listen_addr;
 struct sockaddr_in recAddr;
 socklen_t addr_size;
+
+
+
+
+int min(int x, int y, int z){
+    if(x>y){
+        if(x>z)
+            return x;
+        else
+            return z;
+    }
+    else if(y>z){
+        return y;
+    }
+    else{
+        return z;
+    }
+}
+
+
 /********************/
 /* FUNCTIONS START */
 /*******************/
@@ -69,6 +89,12 @@ void* linkState(void* args){
                         minIndex = b;
                     }
                 }
+                visited[minIndex]=true;
+                for(int u_node=0; u_node<numNodes; ++u_node){
+                    if(!visited[u_node]){
+                        leastDistanceArray[u_node] = min(cost_matrix[srcNode][u_node], cost_matrix[srcNode][minIndex]+cost_matrix[minIndex][u_node], leastDistanceArray[u_node]);
+                    }
+                }
                 
             }
 
@@ -80,12 +106,14 @@ void* linkState(void* args){
 
 /* Recieve Info Thread - Thread 2 */
 void* recieveInfo(void* b){
-    int pack2[3];
-    recvfrom(sock,pack2, sizeof(pack2),0, NULL, NULL);
-    pthread_mutex_lock(&myMutex); //lock
-    cost_matrix[pack2[0]][pack2[1]] = pack2[2];
-    cost_matrix[pack2[1]][pack2[0]] = pack2[2];
-    pthread_mutex_unlock(&myMutex); //unlock
+    while(true){
+        int pack2[3];
+        recvfrom(sock,pack2, sizeof(pack2),0, NULL, NULL);
+        pthread_mutex_lock(&myMutex); //lock
+        cost_matrix[pack2[0]][pack2[1]] = pack2[2];
+        cost_matrix[pack2[1]][pack2[0]] = pack2[2];
+        pthread_mutex_unlock(&myMutex); //unlock
+    }
 }
 
 /* print out table */
@@ -97,12 +125,14 @@ void printTable(void){
     }
     pthread_mutex_unlock(&myMutex);    //unlock
 }
+
 /* Main Function */
 int main(int argc, char *argv[]){
+    printf("break 1");
     pthread_mutex_init(&myMutex, NULL);
     /* Fill cost_matrix */
     FILE* fp = fopen(argv[3], "r"); //open cost file for reading
-
+    printf("break 1");
     int i;
     for(i=0; i<atoi(argv[2]); ++i){
         fscanf(fp, "%d %d %d %d", &cost_matrix[i][0], &cost_matrix[i][1], &cost_matrix[i][2], &cost_matrix[i][3]);
@@ -123,7 +153,7 @@ int main(int argc, char *argv[]){
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_port = linux_machines[myID].port;   //port this node will listen on
     listen_addr.sin_addr.s_addr=htonl(INADDR_ANY);
-    memset((char*)listen_addr.sin_zero, '\0', sizeof(listen_addr));
+    memset((char*)listen_addr.sin_zero, '\0', sizeof(listen_addr.sin_zero));
     addr_size = sizeof(listen_addr);
     int e1,e2;
     e1 = sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -167,5 +197,5 @@ int main(int argc, char *argv[]){
     
     
 
-
+    return 0;
 }
