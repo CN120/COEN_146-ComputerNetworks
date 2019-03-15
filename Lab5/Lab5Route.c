@@ -37,7 +37,8 @@ typedef struct{
 int cost_matrix[numNodes][numNodes];
 Machine linux_machines[numNodes];
 int myID;
-pthread_mutex_t lock;
+pthread_mutex_t myMutex;
+pthread_mutex_init(&myMutex, NULL);
 
 /* network globals */
 int sock;
@@ -76,10 +77,12 @@ void* test2(void* d){
 
 /* print out table */
 void printTable(void){
+    pthread_lock(&myMutex);
     int i;
     for(i=0; i<4; ++i){
         printf("%d %d %d %d\n", cost_matrix[i][0], cost_matrix[i][1], cost_matrix[i][2], cost_matrix[i][3]);
     }
+    pthread_unlock(myMutex);
 }
 /* Main Function */
 int main(int argc, char *argv[]){
@@ -99,7 +102,7 @@ int main(int argc, char *argv[]){
     for(i=0; i<numNodes; ++i){
         fscanf(fp, "%s %s %d", linux_machines[i].name, linux_machines[i].ip, &linux_machines[i].port);
     }
-/*-------------------------------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------------------*/
 
 /* Network setup */
     listen_addr.sin_family = AF_INET;
@@ -118,10 +121,10 @@ int main(int argc, char *argv[]){
     myID = atoi(argv[1]); //sets the program number of the program being run1
     /* setup threads */
     pthread_t thr2, thr3;
-    pthread_create(&thr3, NULL, , NULL);
+    pthread_create(&thr3, NULL, linkState , NULL);
     pthread_create(&thr2, NULL, recieveInfo, NULL);
 
-/*-------------------------------------------------------------------------------------------------------*/
+/*------------------------------------------------------------------------------------*/
 
 
 
