@@ -50,27 +50,22 @@ socklen_t addr_size;
 
 
 
-int min(int x, int y, int z){
-    if(x>y){
-        if(x>z)
-            return x;
-        else
-            return z;
-    }
-    else if(y>z){
-        return y;
-    }
-    else{
-        return z;
-    }
-}
+
 
 
 /********************/
 /* FUNCTIONS START */
 /*******************/
+int min(int x, int y){
+    if(x>y)
+        return x;
+    else
+        return y;
+}
+
 /* Link State Thread - Thread 3 */
 void* linkState(void* args){
+    
     int srcNode;
     int leastDistanceArray[numNodes];
     memset(leastDistanceArray, INT_MAX, sizeof(leastDistanceArray));
@@ -84,24 +79,25 @@ void* linkState(void* args){
                 int minIndex;
                 int minCost = INT_MAX;
                 for(int b=0; b<numNodes; ++b){
-                    if(!visited[b] && cost_matrix[srcNode][b] < minCost){
-                        minCost = cost_matrix[srcNode][b];
+                    if(!visited[b] && leastDistanceArray[b] < minCost){
+                        minCost = leastDistanceArray[b];
                         minIndex = b;
                     }
                 }
                 visited[minIndex]=true;
                 for(int u_node=0; u_node<numNodes; ++u_node){
                     if(!visited[u_node]){
-                        leastDistanceArray[u_node] = min(cost_matrix[srcNode][u_node], cost_matrix[srcNode][minIndex]+cost_matrix[minIndex][u_node], leastDistanceArray[u_node]);
+                        leastDistanceArray[u_node] = min(leastDistanceArray[u_node], leastDistanceArray[minIndex]+cost_matrix[minIndex][u_node]);
                     }
                 }
                 
             }
-
+            printf("%d %d %d %d\n", leastDistanceArray[0], leastDistanceArray[1], leastDistanceArray[2], leastDistanceArray[3]);
         }
+        sleep((rand()%11+10));
     }
-    sleep((rand()%11+10));
-
+    
+     
 }
 
 /* Recieve Info Thread - Thread 2 */
@@ -114,6 +110,7 @@ void* recieveInfo(void* b){
         cost_matrix[pack2[1]][pack2[0]] = pack2[2];
         pthread_mutex_unlock(&myMutex); //unlock
     }
+    
 }
 
 /* print out table */
@@ -128,13 +125,13 @@ void printTable(void){
 
 /* Main Function */
 int main(int argc, char *argv[]){
-    printf("break 1");
     pthread_mutex_init(&myMutex, NULL);
+    myID = atoi(argv[1]); //sets the program number of the program being run1
+
     /* Fill cost_matrix */
     FILE* fp = fopen(argv[3], "r"); //open cost file for reading
-    printf("break 1");
     int i;
-    for(i=0; i<atoi(argv[2]); ++i){
+    for(i=0; i<numNodes; ++i){
         fscanf(fp, "%d %d %d %d", &cost_matrix[i][0], &cost_matrix[i][1], &cost_matrix[i][2], &cost_matrix[i][3]);
     }
     fclose(fp);
@@ -142,11 +139,11 @@ int main(int argc, char *argv[]){
     printTable();
 
     /* Fill Machine structs */
-    fp = fopen(argv[4], "r");   //open machines file for reading
+    FILE* mp = fopen(argv[4], "r");   //open machines file for reading
     for(i=0; i<numNodes; ++i){
-        fscanf(fp, "%s %s %d", linux_machines[i].name, linux_machines[i].ip, &linux_machines[i].port);
+        fscanf(mp, "%s %s %d", linux_machines[i].name, linux_machines[i].ip, &linux_machines[i].port);
     }
-    fclose(fp);
+    fclose(mp);
 /*----------------------------------------------------------------------------------------*/
 
 /* Network setup */
@@ -163,16 +160,16 @@ int main(int argc, char *argv[]){
     }
 
     srand(time(NULL));  //seed random
-    myID = atoi(argv[1]); //sets the program number of the program being run1
     /* setup threads */
     pthread_t thr2, thr3;
     pthread_create(&thr3, NULL, linkState , NULL);
     pthread_create(&thr2, NULL, recieveInfo, NULL);
 
-/*------------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------*/
     
     //input: change cost table from command line
-    printf("please enter an update in the form:\nmachine1 machine2 new_cost");
+    while(true){
+    printf("please enter an update in the form:\nmachine_num new_cost\n");
     int pack[3]; //update array packet
     scanf("%d %d", &pack[1], &pack[2]);
     pack[0] = myID;
@@ -193,6 +190,8 @@ int main(int argc, char *argv[]){
         //memset (recAddr.sin_zero, '\0', sizeof (recAddr.sin_zero));
         addr_size = sizeof recAddr;
         sendto (sock, pack, sizeof(pack), 0, (struct sockaddr *)&recAddr, addr_size); //
+    }
+    sleep(10);
     }
     
     
