@@ -26,6 +26,9 @@ ex: ./lab5 0 4 cost machines
 #include <pthread.h> //threads library
 #include <limits.h> //int_max
 
+
+void printTable(void);
+
 /* define Machine struct */
 typedef struct{
     char name[50];
@@ -57,7 +60,7 @@ socklen_t addr_size;
 /* FUNCTIONS START */
 /*******************/
 int min(int x, int y){
-    if(x>y)
+    if(x<y)
         return x;
     else
         return y;
@@ -72,10 +75,14 @@ void* linkState(void* args){
     bool visited[numNodes];
     while (true){
         for(srcNode=0; srcNode < numNodes; ++srcNode){
-            memset(visited, false, sizeof(visited)); //should work because bools are ints in 'C'
-            memcpy(leastDistanceArray, cost_matrix[srcNode], sizeof(cost_matrix[srcNode]));
+            //memset(visited, false, sizeof(visited)); //should work because bools are ints in 'C'
+            //memcpy(leastDistanceArray, cost_matrix[srcNode], sizeof(cost_matrix[srcNode]));
+            for(int i =0; i< numNodes; ++i){
+                visited[i]= false;
+                leastDistanceArray[i]=cost_matrix[srcNode][i];
+            }
             visited[srcNode]=true;
-            for(int a=1; a<numNodes-1; ++a){
+            for(int a=0; a<numNodes-1; ++a){
                 int minIndex;
                 int minCost = INT_MAX;
                 for(int b=0; b<numNodes; ++b){
@@ -92,6 +99,7 @@ void* linkState(void* args){
                 }
                 
             }
+            printf("Printing least distance array\n");
             printf("%d %d %d %d\n", leastDistanceArray[0], leastDistanceArray[1], leastDistanceArray[2], leastDistanceArray[3]);
         }
         sleep((rand()%11+10));
@@ -102,13 +110,14 @@ void* linkState(void* args){
 
 /* Recieve Info Thread - Thread 2 */
 void* recieveInfo(void* b){
+    int pack2[3];
     while(true){
-        int pack2[3];
         recvfrom(sock,pack2, sizeof(pack2),0, NULL, NULL);
         pthread_mutex_lock(&myMutex); //lock
         cost_matrix[pack2[0]][pack2[1]] = pack2[2];
         cost_matrix[pack2[1]][pack2[0]] = pack2[2];
         pthread_mutex_unlock(&myMutex); //unlock
+        printTable();
     }
     
 }
@@ -148,14 +157,14 @@ int main(int argc, char *argv[]){
 
 /* Network setup */
     listen_addr.sin_family = AF_INET;
-    listen_addr.sin_port = linux_machines[myID].port;   //port this node will listen on
+    listen_addr.sin_port = htons(linux_machines[myID].port);   //port this node will listen on
     listen_addr.sin_addr.s_addr=htonl(INADDR_ANY);
     memset((char*)listen_addr.sin_zero, '\0', sizeof(listen_addr.sin_zero));
     addr_size = sizeof(listen_addr);
     int e1,e2;
-    e1 = sock = socket(AF_INET, SOCK_DGRAM, 0);
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
     e2 = bind(sock, (struct sockaddr*)&listen_addr, sizeof(listen_addr));
-    if(e1==-1 || e2==-1){
+    if(sock==-1 || e2==-1){
         perror("creating socket or binding had an issue");
     }
 
@@ -169,7 +178,7 @@ int main(int argc, char *argv[]){
     
     //input: change cost table from command line
     while(true){
-    printf("please enter an update in the form:\nmachine_num new_cost\n");
+    printf("please enter an update in the form:\nmachine_num new_cost\n\n");
     int pack[3]; //update array packet
     scanf("%d %d", &pack[1], &pack[2]);
     pack[0] = myID;
